@@ -1,8 +1,8 @@
 " -*- vim -*-
 " FILE: "C:\Documents and Settings\William Lee\vimfiles\plugin\JavaImp.vim" {{{
-" LAST MODIFICATION: "Fri, 07 May 2004 10:30:30 Central Standard Time"
+" LAST MODIFICATION: "Fri, 04 Jun 2004 08:56:14 Central Standard Time"
 " HEADER MAINTAINED BY: N/A
-" VERSION: 2.2.2
+" VERSION: 2.2.3
 " (C) 2002-2004 by William Lee, <wl1012@yahoo.com>
 " }}}
 
@@ -284,6 +284,8 @@
 "   their bug fixes/patches.
 "
 " HISTORY:
+"  2.2.3  - 6/4/2004   Fixes a bug where JavaImp ignores files that start
+"                      with 0.
 "  2.2.2  - 5/7/2004   Do not insert the import if the class you want to insert
 "                      is in the same package of the current source file.
 "                      (Thanks to Adam Hawthorne)
@@ -605,7 +607,7 @@ fun! <SID>JavaImpFormatList()
     " in other words, if you hand /javax/swing/JPanel.java, it would 
     " return in JPanel (as regexp var \1)
     let l:classExtensions = '\(\.class\|\.java\)'
-    let l:matchClassName = match(l:currentLine, '[\\/]\([\$1-9A-Za-z_]*\)'.classExtensions.'$')
+    let l:matchClassName = match(l:currentLine, '[\\/]\([\$0-9A-Za-z_]*\)'.classExtensions.'$')
     if l:matchClassName > -1
         let l:matchClassName = l:matchClassName + 1 
         let l:className = strpart(l:currentLine, l:matchClassName)
