@@ -1,8 +1,8 @@
 " -*- vim -*-
-" FILE: "/home/wlee/vim/vimfiles/plugin/JavaImp.vim" {{{
-" LAST MODIFICATION: "Fri, 14 Mar 2003 09:58:07 -0800 (wlee)"
+" FILE: "H:\vim\vimfiles\plugin\JavaImp.vim" {{{
+" LAST MODIFICATION: "Mon, 24 Mar 2003 09:04:27 Pacific Standard Time (wlee)"
 " HEADER MAINTAINED BY: N/A
-" VERSION: 2.1.2
+" VERSION: 2.1.3
 " (C) 2002-2003 by William Lee, <wlee@sendmail.com>
 " }}}
 
@@ -25,7 +25,7 @@
 "       let g:JavaImpPaths = "..."
 "       let g:JavaImpDataDir = "..."
 "
-"   The g:JavaImportPaths is a comma separated list of paths that point to the
+"   The g:JavaImpPaths is a comma separated list of paths that point to the
 "   roots of the 'com' or 'org' etc.
 "
 "   For example: if you have your Java source files in
@@ -42,6 +42,11 @@
 "
 "   Note: Don't forget the ',' to separate the paths.
 "
+"   If ',' is not convenient for you, set g:JavaImpPathSep to the
+"   (single-character) separator you would like to use:
+"
+"       let g:JavaImpPathSep = ':'
+"
 "   The g:JavaImpDataDir is a directory that you use to store JavaImp
 "   settings and cache files. Default is:
 "
@@ -55,7 +60,7 @@
 "   the JavaImp.txt file.  It's recommended that you to use the
 "   g:JavaImpDataDir variable instead.
 "
-"   Now you are ready for some acions.  You can now do a:
+"   Now you are ready for some actions.  You can now do a:
 "
 "       :JavaImpGenerate or :JIG
 "
@@ -225,7 +230,13 @@
 "   
 "   Robert Webb for his sorting function.
 "
+"   Matt Paduano, Toby Allsopp, Dirk Duehr, and others for their bug
+"   fixes/patches.
+"
 " HISTORY:
+"  2.1.3  - 3/17/2003 Added an option to override the default JavaImpPaths
+"                     separator.  Fixes an error when trying to do :JI over an
+"                     unamed buffer.
 "  2.1.2  - 3/14/2003 Fixes a critical bug where a single import match
 "                     would put in a "0" as its name.  Thanks Matt Paduano for
 "                     pointing this out.
@@ -317,6 +328,10 @@ if !exists("g:JavaImpSortBin")
     let g:JavaImpSortBin = "sort" 
 endif
 
+if !exists("g:JavaImpPathSep")
+    let g:JavaImpPathSep = ","
+endif
+
 " -------------------------------------------------------------------  
 " Generating the imports table
 " -------------------------------------------------------------------  
@@ -327,7 +342,9 @@ fun! <SID>JavaImpGenerate()
         return
     endif
     " We would like to save the current buffer first:
-    update
+    if expand("%") != '' 
+        update
+    endif
     cclose
     "Recursivly go through the directory and write to the temporary file.
     let impfile = tempname()
@@ -335,15 +352,15 @@ fun! <SID>JavaImpGenerate()
     let currBuff = bufnr("%")
     silent exe "split ".impfile
     let currPaths = g:JavaImpPaths
-    " See if currPaths has a ',' at the end, if not, we add it.
+    " See if currPaths has a separator at the end, if not, we add it.
         "echo "currPaths begin is " . currPaths
-    if (match(currPaths, ',$') == -1)
-        let currPaths = currPaths . ','
+    if (match(currPaths, g:JavaImpPathSep . '$') == -1)
+        let currPaths = currPaths . g:JavaImpPathSep
     endif
 
     "echo currPaths
-    while (currPaths != "" && currPaths !~ '^ *,$')
-        let sepIdx = stridx(currPaths, ",")
+    while (currPaths != "" && currPaths !~ '^ *' . g:JavaImpPathSep . '$')
+        let sepIdx = stridx(currPaths, g:JavaImpPathSep)
         " Gets the substring exluding the newline
         let currPath = strpart(currPaths, 0, sepIdx)
         echo "Searching in path: " . currPath
@@ -548,8 +565,12 @@ fun! <SID>JavaImpInsert(verboseMode)
         let verbosity = "silent"
     end
        
-    " Write the current buffer first (if we have to)
-    exec verbosity "update"
+    " Write the current buffer first (if we have to).  Note that we only want
+    " to do this if the current buffer is named.
+    if expand("%") != '' 
+        exec verbosity "update"
+    endif
+
     " Save the location of the cursor
     let savedrow = line(".")
     let savedcol = col(".")
