@@ -1,9 +1,9 @@
 " -*- vim -*-
 " FILE: "C:\Documents and Settings\William Lee\vimfiles\plugin\JavaImp.vim" {{{
-" LAST MODIFICATION: "Wed, 29 Oct 2003 08:20:05 Central Standard Time"
+" LAST MODIFICATION: "Fri, 07 May 2004 10:30:30 Central Standard Time"
 " HEADER MAINTAINED BY: N/A
-" VERSION: 2.2.1
-" (C) 2002-2003 by William Lee, <wl1012@yahoo.com>
+" VERSION: 2.2.2
+" (C) 2002-2004 by William Lee, <wl1012@yahoo.com>
 " }}}
 
 
@@ -235,6 +235,9 @@
 "
 "   1. If you have "sed":
 "      > jar tf $JAVA_HOME/src.jar | sed -e 's#^src/##' > jdk.jmplst
+"      
+"      (or if you just have the zip file with the JDK distribution, use
+"      src.zip instead)
 "
 "      If you do not have "sed":
 "      > jar tf $JAVA_HOME/src.jar > jdk.jmplst
@@ -268,7 +271,7 @@
 "
 "   William Lee <wl1012@yahoo.com>
 "
-"   (c) 2002-2003. All Rights Reserved
+"   (c) 2002-2004. All Rights Reserved
 "
 " THANKS:
 "
@@ -277,10 +280,14 @@
 "   
 "   Robert Webb for his sorting function.
 "
-"   Matt Paduano, Toby Allsopp, Dirk Duehr, and others for their bug
-"   fixes/patches.
+"   Matt Paduano, Toby Allsopp, Dirk Duehr, Adam Hawthorne, and others for
+"   their bug fixes/patches.
 "
 " HISTORY:
+"  2.2.2  - 5/7/2004   Do not insert the import if the class you want to insert
+"                      is in the same package of the current source file.
+"                      (Thanks to Adam Hawthorne)
+"  2.2.1  - 10/29/2003 Minor bug fix.
 "  2.2.0  - 3/26/2003 Added the JavaDoc viewing and source viewing
 "                     capabilities.  You can now view API calls through an
 "                     HTML viewer or load up a source file from your paths.
@@ -425,12 +432,26 @@ fun! <SID>JavaImpGenerate()
         let sepIdx = stridx(currPaths, g:JavaImpPathSep)
         " Gets the substring exluding the newline
         let currPath = strpart(currPaths, 0, sepIdx)
-        echo "Searching in path: " . currPath
+
+        let pkgDepth = substitute(currPath, '^.*{\(\d\+\)}.*$', '\1', '')
+        let currPath = substitute(currPath, '^\(.*\){.*}.*', '\1', '')
+
+        let headStr = ""
+        while (pkgDepth != 0)
+            let headStr = headStr . ":h"
+            let pkgDepth = pkgDepth - 1
+        endwhile
+
+        let pathPrefix = fnamemodify(currPath, headStr)
+        let currPkg = strpart(currPath, strlen(pathPrefix) + 1)
+
+        echo "Searching in path (package): " . currPath . ' (' . currPkg .  ')'
         "echo "currPaths: ".currPaths
         let currPaths = strpart(currPaths, sepIdx + 1, strlen(currPaths) - sepIdx - 1)
         "echo "(".currPaths.")"
-        call <SID>JavaAppendClass(currPath,"")
+        call <SID>JavaAppendClass(currPath, currPkg)
     endwhile
+
     "silent exe "write! /tmp/raw"
     let classCount = line("$")
 
@@ -466,7 +487,7 @@ endfun
 
 " The helper function to append a class entry in the class list
 fun! <SID>JavaAppendClass(cpath, relativeTo)
-    "echo "Arguments " . a:cpath . " package is " . a:relativeTo
+    " echo "Arguments " . a:cpath . " package is " . a:relativeTo
     if strlen(a:cpath) < 1 
         echo "Alert! Bug in JavaApppendClass (JavaImp.vim)"
         echo " - null cpath relativeTo ".a:relativeTo
@@ -485,8 +506,10 @@ fun! <SID>JavaAppendClass(cpath, relativeTo)
         " no class we need to determine whether the path is a directory or
         " not, if it is a directory, we need to run this recursively.
         let l:files = glob(a:cpath . "/*") 
-        let l:files = l:files . "\n"
-        while (l:files != "" && l:files !~ '^ *\n$')
+        if (strlen(l:files) != 0)
+            let l:files = l:files . "\n"
+        endif
+        while (l:files != "" && l:files !~ '^\_s*$')
             let l:sepIdx = stridx(l:files, "\n")
             " Gets the substring exluding the newline
             let l:file = strpart(l:files, 0, l:sepIdx)
@@ -658,27 +681,40 @@ fun! <SID>JavaImpInsert(verboseMode)
             let importLine = "import " . fullClassName . ";"
             " Split before we jump
             split
+
             let hasImport = <SID>JavaImpGotoLast()
+            let importLoc = line('.')
 
-            if (hasImport != 0)
-                let currentLine = line(".")
-                exec verbosity "call append(currentLine, importLine)"
-            else
-                let hasPackage = <SID>JavaImpGotoPackage()
-                let currentLine = line(".")
+            let hasPackage = <SID>JavaImpGotoPackage()
+            if (hasPackage == 1)
+                let pkgLoc = line('.')
+                let pkgPat = '^\s*package\s\+\(\%(\w\+\.\)*\w\+\)\s*;.*$'
+                let pkg = substitute(getline(pkgLoc), pkgPat, '\1', '')
 
-                if (hasPackage != 1)
-                    " insert the import statement if there's no package
-                    " statement.
-                    exec verbosity 'call append(0, importLine)'
+                " Check to see if the class is in this package, we won't
+                " need an import.
+                if (fullClassName == (pkg . '.' . className))
+                    let importLoc = -1
                 else
-                    exec verbosity 'call append(currentLine, importLine)'
-                    exec verbosity 'call append(currentLine, "")'
+                    if (hasImport == 0)
+                        " Add an extra blank line after the package before
+                        " the import
+                        exec verbosity 'call append(pkgLoc, "")'
+                        let importLoc = pkgLoc + 1
+                    endif
                 endif
+            elseif (hasImport == 0)
+                let importLoc = 0
             endif
 
+            exec verbosity 'call append(importLoc, importLine)'
+
             if a:verboseMode
-                echo "Inserted " . fullClassName . " for " . className 
+                if (importLoc >= 0)
+                    echo "Inserted " . fullClassName . " for " . className 
+                else
+                    echo "Import unneeded (same package): " . fullClassName
+                endif
             endif 
 
             " go back to the old location
