@@ -1,0 +1,5 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=325
+
+This script can generate a Java class name to package mapping file from multiple source paths.  Once you have create the mapping file,  you can use this file to insert import statements in your .java file using a simple key mapping.  It can also sort your imports too!  
+
+JavaImp can also be integrated with JavaDoc, where you can lookup APIs very quickly by just hitting a hot key on a class name.  This script can save the time you spent looking up docs and typing in routine import package names.  Give it a try!
