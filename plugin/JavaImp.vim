@@ -1,9 +1,9 @@
 " -*- vim -*-
-" FILE: "H:\vim\vimfiles\plugin\JavaImp.vim" {{{
-" LAST MODIFICATION: "Wed, 26 Mar 2003 17:23:00 Pacific Standard Time (wlee)"
+" FILE: "C:\Documents and Settings\William Lee\vimfiles\plugin\JavaImp.vim" {{{
+" LAST MODIFICATION: "Wed, 29 Oct 2003 08:20:05 Central Standard Time"
 " HEADER MAINTAINED BY: N/A
-" VERSION: 2.2.0
-" (C) 2002-2003 by William Lee, <wlee@sendmail.com>
+" VERSION: 2.2.1
+" (C) 2002-2003 by William Lee, <wl1012@yahoo.com>
 " }}}
 
 
@@ -266,7 +266,7 @@
 "
 "   Please mail any comment/suggestion/patch to 
 "
-"   William Lee <wlee@sendmail.com>
+"   William Lee <wl1012@yahoo.com>
 "
 "   (c) 2002-2003. All Rights Reserved
 "
@@ -1139,10 +1139,10 @@ fun! <SID>JavaImpDoc()
         "echo "Searching in path: " . currPath
         let currPaths = strpart(currPaths, sepIdx + 1, strlen(currPaths) - sepIdx - 1)
         let docFile = <SID>JavaImpGetFile(currPath, fullClassName, ".html")
-        if (docFile != "")
+	    if (filereadable(docFile))
             call <SID>JavaImpViewDoc(docFile)
             return
-        endif
+	    endif
     endwhile
     echo "JavaDoc not found in g:JavaImpDocPaths for class " . fullClassName
     return
